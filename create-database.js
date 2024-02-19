@@ -1,41 +1,10 @@
 import mongoose from "mongoose";
+import { Supplier, Product, Offer, SalesOrder } from "./models.js";
 
 mongoose
   .connect("mongodb://localhost:27017/ProductManagementSystem")
   .then(() => console.log("Connected to MongoDB..."))
   .catch((err) => console.error("Couldn't connect to MongoDB...", err));
-
-const supplierSchema = new mongoose.Schema({
-  name: String,
-  contact: String,
-  email: String,
-});
-
-const productSchema = new mongoose.Schema({
-  name: String,
-  category: String,
-  price: Number,
-  cost: Number,
-  stock: Number,
-  supplier: String,
-});
-
-const offerSchema = new mongoose.Schema({
-  products: [String],
-  price: Number,
-  active: Boolean,
-});
-
-const salesOrderSchema = new mongoose.Schema({
-  offer: String,
-  quantity: Number,
-  status: String,
-});
-
-const Supplier = mongoose.model("Supplier", supplierSchema);
-const Product = mongoose.model("Product", productSchema);
-const Offer = mongoose.model("Offer", offerSchema);
-const SalesOrder = mongoose.model("SalesOrder", salesOrderSchema);
 
 const insertData = async () => {
   await Supplier.insertMany([
