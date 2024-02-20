@@ -25,7 +25,7 @@ const insertData = async () => {
     },
   ]);
 
-  await Product.insertMany([
+  const insertedProducts = await Product.insertMany([
     {
       name: "Laptop",
       category: "Electronics",
@@ -72,23 +72,44 @@ const insertData = async () => {
       price: 30,
       cost: 20,
       stock: 60,
-      supplier: "Fashion Supplier Co.",
+      supplier: "Ultimate Sports Gear",
     },
   ]);
 
-  await Offer.insertMany([
-    { products: ["Laptop", "Smartphone"], price: 1800, active: true },
-    { products: ["T-shirt", "Shampoo"], price: 30, active: true },
+  const findProductIdByName = (name) =>
+    insertedProducts.find((p) => p.name === name)?._id;
+
+  const offers = await Offer.insertMany([
     {
-      products: ["Refrigerator", "Smartphone", "Soccer Ball"],
+      products: [
+        findProductIdByName("Laptop"),
+        findProductIdByName("Smartphone"),
+      ],
+      price: 1800,
+      active: true,
+    },
+    {
+      products: [
+        findProductIdByName("T-shirt"),
+        findProductIdByName("Shampoo"),
+      ],
+      price: 30,
+      active: true,
+    },
+    {
+      products: [
+        findProductIdByName("Refrigerator"),
+        findProductIdByName("Smartphone"),
+        findProductIdByName("Soccer Ball"),
+      ],
       price: 1830,
       active: false,
     },
   ]);
 
   await SalesOrder.insertMany([
-    { offer: "Offer 1", quantity: 2, status: "pending" },
-    { offer: "Offer 3", quantity: 1, status: "pending" },
+    { offer: offers[0]._id, quantity: 2, status: "pending" },
+    { offer: offers[2]._id, quantity: 1, status: "pending" },
   ]);
 
   await Category.insertMany([

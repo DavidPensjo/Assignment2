@@ -16,13 +16,19 @@ const productSchema = new mongoose.Schema({
 });
 
 const offerSchema = new mongoose.Schema({
-  products: [String],
+  products: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    },
+  ],
   price: Number,
   active: Boolean,
 });
 
 const salesOrderSchema = new mongoose.Schema({
   offer: String,
+  product: String,
   quantity: Number,
   status: String,
 });
