@@ -7,7 +7,6 @@ mongoose
   .catch((err) => console.error("Couldn't connect to MongoDB...", err));
 
 const insertData = async () => {
-  // Insert Suppliers
   await Supplier.insertMany([
     {
       name: "Electronics Supplier Inc.",
@@ -26,7 +25,6 @@ const insertData = async () => {
     },
   ]);
 
-  // Insert Products and capture the inserted documents to get their IDs
   const insertedProducts = await Product.insertMany([
     {
       name: "Laptop",
@@ -78,36 +76,42 @@ const insertData = async () => {
     },
   ]);
 
-  // Find product IDs by names (assuming unique names for simplicity)
-  const findProductIdByName = (name) => insertedProducts.find(p => p.name === name)?._id;
+  const findProductIdByName = (name) =>
+    insertedProducts.find((p) => p.name === name)?._id;
 
-  // Insert Offers using Product IDs
   const offers = await Offer.insertMany([
     {
-      products: [findProductIdByName("Laptop"), findProductIdByName("Smartphone")],
+      products: [
+        findProductIdByName("Laptop"),
+        findProductIdByName("Smartphone"),
+      ],
       price: 1800,
       active: true,
     },
     {
-      products: [findProductIdByName("T-shirt"), findProductIdByName("Shampoo")],
+      products: [
+        findProductIdByName("T-shirt"),
+        findProductIdByName("Shampoo"),
+      ],
       price: 30,
       active: true,
     },
     {
-      products: [findProductIdByName("Refrigerator"), findProductIdByName("Smartphone"), findProductIdByName("Soccer Ball")],
+      products: [
+        findProductIdByName("Refrigerator"),
+        findProductIdByName("Smartphone"),
+        findProductIdByName("Soccer Ball"),
+      ],
       price: 1830,
       active: false,
     },
   ]);
 
-  // Assuming you're manually matching offers to orders for simplicity here
-  // Insert SalesOrders using Offer IDs
   await SalesOrder.insertMany([
     { offer: offers[0]._id, quantity: 2, status: "pending" },
     { offer: offers[2]._id, quantity: 1, status: "pending" },
   ]);
 
-  // Insert Categories
   await Category.insertMany([
     { name: "Electronics" },
     { name: "Clothing" },

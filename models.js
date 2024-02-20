@@ -19,16 +19,16 @@ const offerSchema = new mongoose.Schema({
   products: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Product", // Ensure this matches the name you used when calling mongoose.model() for Products
+      ref: "Product",
     },
   ],
   price: Number,
   active: Boolean,
-  // other fields as necessary
 });
 
 const salesOrderSchema = new mongoose.Schema({
   offer: String,
+  product: String,
   quantity: Number,
   status: String,
 });
