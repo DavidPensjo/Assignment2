@@ -16,9 +16,15 @@ const productSchema = new mongoose.Schema({
 });
 
 const offerSchema = new mongoose.Schema({
-  products: [String],
+  products: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product", // Ensure this matches the name you used when calling mongoose.model() for Products
+    },
+  ],
   price: Number,
   active: Boolean,
+  // other fields as necessary
 });
 
 const salesOrderSchema = new mongoose.Schema({

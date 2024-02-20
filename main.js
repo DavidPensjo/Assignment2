@@ -9,7 +9,9 @@ mongoose
   .then(() => console.log("Connected to MongoDB..."))
   .catch((err) => console.error("Could not connect to MongoDB...", err));
 
-function mainMenu() {
+async function mainMenu() {
+  await updateOffersActiveStatus();
+
   console.log("\nMain Menu:");
   console.log("1. Add new category");
   console.log("2. Add new product");
@@ -83,6 +85,20 @@ function mainMenu() {
     default:
       console.log("Invalid option, please choose again.");
       mainMenu();
+  }
+}
+
+async function updateOffersActiveStatus() {
+  const offers = await Offer.find();
+
+  for (let offer of offers) {
+    const products = await Product.find({ name: { $in: offer.products } });
+    const allInStock = products.every((product) => product.stock > 0);
+
+    if (offer.active !== allInStock) {
+      offer.active = allInStock;
+      await offer.save();
+    }
   }
 }
 
@@ -435,19 +451,241 @@ async function viewNumberOfOffersByStock() {
   mainMenu();
 }
 
-function createOrderForProducts() {
+async function createOrderForProducts() {
   console.log("Creating order for products...");
+
+  const products = await Product.find({});
+  if (products.length === 0) {
+    console.log("No products available.");
+    mainMenu();
+    return;
+  }
+
+  products.forEach((product, index) => {
+    console.log(
+      `${index + 1}. ${product.name} - Price: $${product.price}, Stock: ${
+        product.stock
+      }`
+    );
+  });
+
+  let productChoice = parseInt(
+    input("Select a product by number: ").trim(),
+    10
+  );
+  if (
+    isNaN(productChoice) ||
+    productChoice < 1 ||
+    productChoice > products.length
+  ) {
+    console.log("Invalid choice.");
+    mainMenu();
+    return;
+  }
+
+  const selectedProduct = products[productChoice - 1];
+
+  let quantity = parseInt(
+    input(`Enter quantity (up to ${selectedProduct.stock}): `).trim(),
+    10
+  );
+  if (isNaN(quantity) || quantity < 1 || quantity > selectedProduct.stock) {
+    console.log(
+      "Invalid quantity. Please ensure it does not exceed available stock."
+    );
+    mainMenu();
+    return;
+  }
+
+  // Here's the key change: Use selectedProduct._id instead of selectedProduct.name
+  const order = new SalesOrder({
+    product: selectedProduct._id, // Use product ID to reference the Product document
+    quantity: quantity,
+    status: "pending",
+  });
+
+  try {
+    await order.save();
+    console.log(
+      `Order for ${quantity}x ${selectedProduct.name} created successfully and is now pending.`
+    );
+  } catch (error) {
+    console.error("Failed to create order:", error);
+  }
+
   mainMenu();
 }
 
-function createOrderForOffers() {
+async function createOrderForOffers() {
   console.log("Creating order for offers...");
+
+  // Fetch offers and populate the product details to access names and stock
+  const offers = await Offer.find({ active: true }).populate("products");
+  if (offers.length === 0) {
+    console.log("No offers available.");
+    mainMenu();
+    return;
+  }
+
+  offers.forEach((offer, index) => {
+    const productNames = offer.products
+      .map((product) => product.name)
+      .join(", ");
+    console.log(
+      `${index + 1}. Offer includes: ${productNames}, Price: $${offer.price}`
+    );
+  });
+
+  let offerChoice = parseInt(input("Select an offer by number: ").trim(), 10);
+  if (isNaN(offerChoice) || offerChoice < 1 || offerChoice > offers.length) {
+    console.log("Invalid choice.");
+    mainMenu();
+    return;
+  }
+
+  const selectedOffer = offers[offerChoice - 1];
+
+  // Calculate the minimum stock among the products in the selected offer
+  const minStock = selectedOffer.products.reduce(
+    (min, product) => Math.min(min, product.stock),
+    Infinity
+  );
+
+  console.log(
+    `Maximum quantity available for this offer based on stock: ${minStock}`
+  );
+  let quantity = parseInt(input("Enter quantity: ").trim(), 10);
+
+  if (isNaN(quantity) || quantity < 1) {
+    console.log("Invalid quantity.");
+    mainMenu();
+    return;
+  } else if (quantity > minStock) {
+    console.log(`Quantity exceeds maximum available stock (${minStock}).`);
+    mainMenu();
+    return;
+  }
+
+  // Create a new sales order for the selected offer
+  const order = new SalesOrder({
+    offer: selectedOffer._id,
+    quantity: quantity,
+    status: "pending",
+  });
+
+  try {
+    await order.save();
+    console.log(
+      `Order for ${quantity}x [${selectedOffer.products
+        .map((product) => product.name)
+        .join(", ")}] created successfully and is now pending.`
+    );
+  } catch (error) {
+    console.error("Failed to create order for offer:", error);
+  }
+
+  // Assuming mainMenu() is a function that brings the user back to the main menu of your application
   mainMenu();
 }
 
-function shipOrders() {
-  console.log("Shipping orders...");
+async function shipOrders() {
+  console.log("Fetching pending orders...");
+  const pendingOrders = await SalesOrder.find({ status: "pending" });
+
+  if (pendingOrders.length === 0) {
+    console.log("No pending orders available to ship.");
+    mainMenu();
+    return;
+  }
+
+  pendingOrders.forEach((order, index) => {
+    console.log(
+      `${index + 1}. Order ID: ${order._id}, Quantity: ${order.quantity}`
+    );
+  });
+
+  const selectedOrdersInput = input(
+    "Enter the numbers of the orders you wish to ship, separated by commas (e.g., 1,2,3): "
+  ).trim();
+  const selectedIndices = selectedOrdersInput
+    .split(",")
+    .map((num) => parseInt(num.trim(), 10) - 1);
+
+  for (const index of selectedIndices) {
+    if (index < 0 || index >= pendingOrders.length) {
+      console.log(`Invalid selection: ${index + 1}`);
+      continue;
+    }
+    const order = pendingOrders[index];
+    // Assuming the 'product' and 'offer' fields in SalesOrder reference IDs from the respective collections
+    if (order.product) {
+      await handleProductOrder(order);
+    } else if (order.offer) {
+      await handleOfferOrder(order);
+    } else {
+      console.log(
+        `Order ID: ${order._id} does not have a valid product or offer reference.`
+      );
+    }
+  }
+
   mainMenu();
+}
+
+async function handleProductOrder(order) {
+  try {
+    // Debugging: log the order to see what's being processed
+    console.log("Processing order:", order);
+
+    if (!order.product) {
+      console.log(`Order ID: ${order._id} does not have a product reference.`);
+      return;
+    }
+
+    const product = await Product.findById(order.product);
+    if (!product) {
+      console.log(`Product not found for order ID: ${order._id}.`);
+      return;
+    }
+    if (product.stock < order.quantity) {
+      console.log(`Insufficient stock for product order ID: ${order._id}.`);
+      return;
+    }
+    product.stock -= order.quantity;
+    await product.save();
+    order.status = "shipped";
+    await order.save();
+    console.log(`Product order ${order._id} has been shipped.`);
+  } catch (error) {
+    console.error(`Error processing product order ${order._id}:`, error);
+  }
+}
+
+async function handleOfferOrder(order) {
+  try {
+    const offer = await Offer.findById(order.offer);
+    if (!offer) {
+      console.log(`Offer not found for order ID: ${order._id}.`);
+      return;
+    }
+    // Adjust the query to match products by their name (or appropriate field) instead of _id
+    const products = await Product.find({ name: { $in: offer.products } }); // Assuming offer.products contains product names
+    if (products.some((product) => product.stock < order.quantity)) {
+      console.log(
+        `Insufficient stock for one or more products in offer order ID: ${order._id}.`
+      );
+      return;
+    }
+    for (const product of products) {
+      product.stock -= order.quantity;
+      await product.save();
+    }
+    order.status = "shipped";
+    await order.save();
+    console.log(`Offer order ${order._id} has been shipped.`);
+  } catch (error) {
+    console.error(`Error processing offer order ${order._id}: ${error}`);
+  }
 }
 
 function addNewSupplier() {
