@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Supplier, Product, Offer, SalesOrder } from "./models.js";
+import { Supplier, Product, Offer, SalesOrder, Category } from "./models.js";
 
 mongoose
   .connect("mongodb://localhost:27017/ProductManagementSystem")
@@ -89,6 +89,14 @@ const insertData = async () => {
   await SalesOrder.insertMany([
     { offer: "Offer 1", quantity: 2, status: "pending" },
     { offer: "Offer 3", quantity: 1, status: "pending" },
+  ]);
+
+  await Category.insertMany([
+    { name: "Electronics" },
+    { name: "Clothing" },
+    { name: "Home Appliances" },
+    { name: "Beauty & Personal Care" },
+    { name: "Sports & Outdoors" },
   ]);
 
   console.log("Data inserted successfully!");
