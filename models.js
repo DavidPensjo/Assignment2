@@ -27,10 +27,21 @@ const offerSchema = new mongoose.Schema({
 });
 
 const salesOrderSchema = new mongoose.Schema({
-  offer: String,
-  product: String,
+  offer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Offer",
+  },
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+  },
   quantity: Number,
+  totalPrice: Number,
   status: String,
+  date: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 const categorySchema = new mongoose.Schema({

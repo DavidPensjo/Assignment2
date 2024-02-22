@@ -70,7 +70,7 @@ async function mainMenu() {
       addNewSupplier();
       break;
     case "12":
-      viewSuppliers();
+      viewAllSuppliers();
       break;
     case "13":
       viewAllSales();
@@ -534,7 +534,6 @@ async function createOrderForOffers() {
   }
 
   const selectedOffer = offers[offerChoice - 1];
-
   const minStock = selectedOffer.products.reduce(
     (min, product) => Math.min(min, product.stock),
     Infinity
@@ -555,22 +554,24 @@ async function createOrderForOffers() {
     return;
   }
 
+  const discount = quantity >= 10 ? 0.9 : 1;
+  const totalPrice = selectedOffer.price * quantity * discount;
+
   const order = new SalesOrder({
     offer: selectedOffer._id,
     quantity: quantity,
     status: "pending",
+    totalPrice: totalPrice,
   });
 
-  try {
-    await order.save();
-    console.log(
-      `Order for ${quantity}x [${selectedOffer.products
-        .map((product) => product.name)
-        .join(", ")}] created successfully and is now pending.`
-    );
-  } catch (error) {
-    console.error("Failed to create order for offer:", error);
-  }
+  await order.save();
+  console.log(
+    `Order for ${quantity}x [${selectedOffer.products
+      .map((product) => product.name)
+      .join(
+        ", "
+      )}] at a total price of $${totalPrice} created successfully and is now pending.`
+  );
 
   mainMenu();
 }
@@ -631,38 +632,123 @@ async function handleProductOrder(order) {
 }
 
 async function handleOfferOrder(order) {
-  const offer = await Offer.findById(order.offer).populate("products");
-  if (!offer) {
-    console.log(`Offer not found for order ID: ${order._id}.`);
-    return;
-  }
-  if (offer.products.some((product) => product.stock < order.quantity)) {
+  try {
+    const offer = await Offer.findById(order.offer).populate("products");
+    if (!offer) {
+      console.log(`Offer not found for order ID: ${order._id}.`);
+      return;
+    }
+    if (offer.products.some((product) => product.stock < order.quantity)) {
+      console.log(
+        `Insufficient stock for one or more products in offer order ID: ${order._id}.`
+      );
+      return;
+    }
+
+    const discountMultiplier = order.quantity >= 10 ? 0.9 : 1;
+    const totalPrice = offer.price * order.quantity * discountMultiplier;
+
+    for (const product of offer.products) {
+      if (product.stock < order.quantity) {
+        console.error(`Insufficient stock for product ${product.name}`);
+      }
+      product.stock -= order.quantity;
+      await product.save();
+    }
+
+    order.status = "shipped";
+    order.totalPrice = totalPrice;
+    await order.save();
+
     console.log(
-      `Insufficient stock for one or more products in offer order ID: ${order._id}.`
+      `Offer order ${order._id} has been shipped with total price: $${totalPrice}.`
     );
+  } catch (error) {
+    console.error(`Error processing offer order ${order._id}:`, error);
+  }
+}
+
+async function addNewSupplier() {
+  console.log("Adding a new supplier...");
+
+  const name = input("Enter supplier name: ").trim();
+  const contact = input("Enter supplier contact: ").trim();
+  const email = input("Enter supplier email: ").trim();
+
+  if (!name) {
+    console.log("Supplier name cannot be empty.");
+    return mainMenu();
+  }
+
+  const supplier = new Supplier({
+    name,
+    contact,
+    email,
+  });
+
+  try {
+    await supplier.save();
+    console.log("New supplier added successfully.");
+  } catch (error) {
+    console.error("Failed to add new supplier:", error);
+  }
+
+  mainMenu();
+}
+
+async function viewAllSuppliers() {
+  console.log("Viewing all suppliers...");
+
+  const suppliers = await Supplier.find({});
+
+  if (suppliers.length === 0) {
+    console.log("No suppliers found.");
+  } else {
+    suppliers.forEach((supplier, index) => {
+      console.log(
+        `${index + 1}. Name: ${supplier.name}, Contact: ${
+          supplier.contact
+        }, Email: ${supplier.email}`
+      );
+    });
+  }
+
+  mainMenu();
+}
+
+async function viewAllSales() {
+  console.log("Viewing all sales orders...");
+
+  const salesOrders = await SalesOrder.find({})
+    .populate("product offer")
+    .exec();
+
+  if (salesOrders.length === 0) {
+    console.log("No sales orders found.");
+    mainMenu();
     return;
   }
-  for (const product of offer.products) {
-    product.stock -= order.quantity;
-    await product.save();
-  }
-  order.status = "shipped";
-  await order.save();
-  console.log(`Offer order ${order._id} has been shipped.`);
-}
 
-function addNewSupplier() {
-  console.log("Adding a new supplier...");
-  mainMenu();
-}
+  salesOrders.forEach((order, index) => {
+    let date = new Date(order.date).toLocaleDateString("en-US");
+    let status = order.status;
+    let totalCost;
 
-function viewSuppliers() {
-  console.log("Viewing suppliers...");
-  mainMenu();
-}
+    if (order.product) {
+      totalCost = order.product.price * order.quantity;
+    } else if (order.offer) {
+      totalCost = order.offer.price * order.quantity;
+    } else {
+      totalCost = "N/A";
+    }
 
-function viewAllSales() {
-  console.log("Viewing all sales...");
+    console.log(`Order Number: ${order._id}`);
+    console.log(`Date: ${date}`);
+    console.log(`Status: ${status}`);
+    console.log(`Total Cost: $${totalCost}`);
+    console.log("------");
+  });
+
   mainMenu();
 }
 
