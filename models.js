@@ -43,10 +43,8 @@ const salesOrderSchema = new mongoose.Schema({
     default: Date.now,
   },
   totalPrice: Number,
-  totalRevenue: Number,
-  revenuePerOffer: Number,
-  totalProfit: Number,
-  profitPerOffer: Number,
+  profitBeforeTax: Number,
+  profitAfterTax: Number,
 });
 
 const categorySchema = new mongoose.Schema({
