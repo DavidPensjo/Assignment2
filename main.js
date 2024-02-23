@@ -236,6 +236,7 @@ async function viewProductsByCategory() {
     }
 
     const selectedCategory = categories[choice - 1];
+    console.log(`Fetching products for category: ${selectedCategory.name}`);
     const products = await Product.find({ category: selectedCategory.name });
 
     if (products.length === 0) {
@@ -371,36 +372,41 @@ async function viewAllOffersContainingProductFromCategory() {
     console.log(`${index + 1}. ${category.name}`);
   });
 
-  const categoryChoice = parseInt(
-    input("Select a category number: ").trim(),
-    10
-  );
-  if (
-    isNaN(categoryChoice) ||
-    categoryChoice < 1 ||
-    categoryChoice > categories.length
-  ) {
+  let categoryChoice =
+    parseInt(input("Select a category number: ").trim(), 10) - 1;
+  if (categoryChoice < 0 || categoryChoice >= categories.length) {
     console.log("Invalid choice.");
     mainMenu();
     return;
   }
 
-  const selectedCategory = categories[categoryChoice - 1];
+  const selectedCategory = categories[categoryChoice];
 
-  const productsInCategory = await Product.find({
-    category: selectedCategory.name,
-  });
-  if (productsInCategory.length === 0) {
-    console.log(
-      `No products found in the "${selectedCategory.name}" category.`
-    );
-    mainMenu();
-    return;
-  }
+  const offers = await Offer.aggregate([
+    {
+      $lookup: {
+        from: "products",
+        localField: "products",
+        foreignField: "_id",
+        as: "productDetails",
+      },
+    },
+    {
+      $match: {
+        "productDetails.category": selectedCategory.name,
+      },
+    },
+    {
+      $project: {
+        products: 1,
+        price: 1,
+        cost: 1,
+        active: 1,
+        productDetails: 1,
+      },
+    },
+  ]);
 
-  const productNames = productsInCategory.map((product) => product.name);
-
-  const offers = await Offer.find({ products: { $in: productNames } });
   if (offers.length === 0) {
     console.log(
       `No offers found containing products from the "${selectedCategory.name}" category.`
@@ -414,9 +420,9 @@ async function viewAllOffersContainingProductFromCategory() {
   );
   offers.forEach((offer, index) => {
     console.log(
-      `${index + 1}. Included Products: ${offer.products.join(", ")}, Price: $${
-        offer.price
-      }, Stock: ${offer.active ? "In stock" : "Out of stock"}`
+      `${index + 1}. Offer ID: ${offer._id}, Products: ${offer.productDetails
+        .map((pd) => pd.name)
+        .join(", ")}, Price: $${offer.price}`
     );
   });
 
