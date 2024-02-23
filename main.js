@@ -15,74 +15,94 @@ async function mainMenu() {
   console.log("\nMain Menu:");
   console.log("1. Add new category");
   console.log("2. Add new product");
-  console.log("3. View products by category");
-  console.log("4. View products by supplier");
-  console.log("5. View all offers within a price range");
+  console.log("3. Create an offer");
+  console.log("4. View products by category");
+  console.log("5. View products by supplier");
+  console.log("6. View all offers within a price range");
   console.log(
-    "6. View all offers that contain a product from a specific category"
+    "7. View all offers that contain a product from a specific category"
   );
   console.log(
-    "7. View the number of offers based on the number of its products in stock"
+    "8. View the number of offers based on the number of its products in stock"
   );
-  console.log("8. Create order for products");
-  console.log("9. Create order for offers");
-  console.log("10. Ship orders");
-  console.log("11. Add a new supplier");
-  console.log("12. View suppliers");
-  console.log("13. View all sales");
-  console.log("14. View sum of all profits");
-  console.log("15. Exit");
+  console.log("9. Create order for products");
+  console.log("10. Create order for offers");
+  console.log("11. Ship orders");
+  console.log("12. Add a new supplier");
+  console.log("13. View suppliers");
+  console.log("14. View all sales");
+  console.log("15. View sum of all profits");
+  console.log("16. Exit");
 
   let option = input("Select an option: ");
 
   switch (option) {
     case "1":
+      console.clear();
       addNewCategory();
       break;
     case "2":
+      console.clear();
       addNewProduct();
       break;
     case "3":
-      viewProductsByCategory();
+      console.clear();
+      addNewOffer();
       break;
     case "4":
-      viewProductsBySupplier();
+      console.clear();
+      viewProductsByCategory();
       break;
     case "5":
-      viewAllOffersWithinPriceRange();
+      console.clear();
+      viewProductsBySupplier();
       break;
     case "6":
-      viewAllOffersContainingProductFromCategory();
+      console.clear();
+      viewAllOffersWithinPriceRange();
       break;
     case "7":
-      viewNumberOfOffersByStock();
+      console.clear();
+      viewAllOffersContainingProductFromCategory();
       break;
     case "8":
-      createOrderForProducts();
+      console.clear();
+      viewNumberOfOffersByStock();
       break;
     case "9":
-      createOrderForOffers();
+      console.clear();
+      createOrderForProducts();
       break;
     case "10":
-      shipOrders();
+      console.clear();
+      createOrderForOffers();
       break;
     case "11":
-      addNewSupplier();
+      console.clear();
+      shipOrders();
       break;
     case "12":
-      viewAllSuppliers();
+      console.clear();
+      addNewSupplier();
       break;
     case "13":
-      viewAllSales();
+      console.clear();
+      viewAllSuppliers();
       break;
     case "14":
-      viewSumOfAllProfits();
+      console.clear();
+      viewAllSales();
       break;
     case "15":
+      console.clear();
+      viewSumOfAllProfits();
+      break;
+    case "16":
       console.log("Exiting...");
       mongoose.disconnect();
       process.exit(0);
     default:
+      console.clear();
       console.log("Invalid option, please choose again.");
       mainMenu();
   }
@@ -117,7 +137,8 @@ async function addNewCategory() {
 
   try {
     await category.save();
-    console.log("Category added successfully.");
+    console.clear();
+    console.log(`Category "${name}" was added successfully.`);
   } catch (error) {
     console.error("Failed to add category:", error);
   }
@@ -262,6 +283,7 @@ async function viewProductsByCategory() {
     );
     mainMenu();
   }
+  mainMenu();
 }
 
 async function viewProductsBySupplier() {
@@ -432,26 +454,26 @@ async function viewAllOffersContainingProductFromCategory() {
 async function viewNumberOfOffersByStock() {
   console.log("Viewing number of offers by product stock availability...");
 
-  const offers = await Offer.find();
+  const offers = await Offer.find().populate("products");
   let allInStockCount = 0;
   let someInStockCount = 0;
   let noneInStockCount = 0;
 
   for (let offer of offers) {
-    const products = await Product.find({ name: { $in: offer.products } });
+    let inStock = 0;
+    let outOfStock = 0;
 
-    let stockStatus = products.reduce(
-      (acc, product) => {
-        if (product.stock > 0) acc.inStock++;
-        else acc.outOfStock++;
-        return acc;
-      },
-      { inStock: 0, outOfStock: 0 }
-    );
+    offer.products.forEach((product) => {
+      if (product.stock > 0) {
+        inStock++;
+      } else {
+        outOfStock++;
+      }
+    });
 
-    if (stockStatus.inStock === products.length) {
+    if (inStock === offer.products.length) {
       allInStockCount++;
-    } else if (stockStatus.outOfStock === products.length) {
+    } else if (outOfStock === offer.products.length) {
       noneInStockCount++;
     } else {
       someInStockCount++;
@@ -592,57 +614,90 @@ async function createOrderForOffers() {
 
 async function shipOrders() {
   console.log("Fetching pending orders...");
-  const pendingOrders = await SalesOrder.find({ status: "pending" });
+  const pendingOrders = await SalesOrder.find({ status: "pending" }).populate(
+    "product offer"
+  );
   if (pendingOrders.length === 0) {
     console.log("No pending orders available to ship.");
     mainMenu();
     return;
   }
-  pendingOrders.forEach((order, index) => {
+
+  let selectedOrderIndices = [];
+  let inputVal = "";
+
+  while (inputVal.toLowerCase() !== "c") {
+    console.clear();
     console.log(
-      `${index + 1}. Order ID: ${order._id}, Quantity: ${order.quantity}`
+      "Pending Orders (toggle selection by number, confirm with 'c'):"
     );
-  });
-  const selectedOrdersInput = input(
-    "Enter the numbers of the orders you wish to ship, separated by commas (e.g., 1,2,3): "
-  ).trim();
-  const selectedIndices = selectedOrdersInput
-    .split(",")
-    .map((num) => parseInt(num.trim(), 10) - 1);
-  for (const index of selectedIndices) {
-    if (index < 0 || index >= pendingOrders.length) {
-      console.log(`Invalid selection: ${index + 1}`);
-      continue;
+
+    pendingOrders.forEach((order, index) => {
+      const isSelected = selectedOrderIndices.includes(index)
+        ? "(Selected)"
+        : "";
+      console.log(
+        `${index + 1}: Order ID: ${order._id}, Quantity: ${
+          order.quantity
+        } ${isSelected}`
+      );
+    });
+
+    inputVal = input("Toggle order selection (number) or confirm (c): ");
+    const orderIndex = parseInt(inputVal) - 1;
+
+    if (
+      !isNaN(orderIndex) &&
+      orderIndex >= 0 &&
+      orderIndex < pendingOrders.length
+    ) {
+      const index = selectedOrderIndices.indexOf(orderIndex);
+      if (index > -1) {
+        selectedOrderIndices.splice(index, 1);
+      } else {
+        selectedOrderIndices.push(orderIndex);
+      }
     }
+  }
+
+  for (const index of selectedOrderIndices) {
     const order = pendingOrders[index];
     if (order.product) {
       await handleProductOrder(order);
     } else if (order.offer) {
       await handleOfferOrder(order);
-    } else {
-      console.log(
-        `Order ID: ${order._id} does not have a valid product or offer reference.`
-      );
     }
   }
+
+  console.log("Selected orders have been marked as shipped.");
   mainMenu();
 }
 
 async function handleProductOrder(order) {
-  const product = await Product.findById(order.product);
-  if (!product) {
-    console.log(`Product not found for order ID: ${order._id}.`);
-    return;
+  try {
+    const product = await Product.findById(order.product);
+    if (!product) {
+      console.log(`Product not found for order ID: ${order._id}.`);
+      return;
+    }
+    if (product.stock < order.quantity) {
+      console.log(`Insufficient stock for product order ID: ${order._id}.`);
+      return;
+    }
+    const totalCost = product.cost * order.quantity;
+    const totalPrice = product.price * order.quantity;
+    const profitBeforeTax = totalPrice - totalCost;
+    product.stock -= order.quantity;
+    await product.save();
+    order.status = "shipped";
+    order.totalPrice = totalPrice;
+    order.profitBeforeTax = profitBeforeTax;
+    order.profitAfterTax = profitBeforeTax * 0.7;
+    await order.save();
+    console.log(`Product order ${order._id} has been shipped.`);
+  } catch (error) {
+    console.error(`Error processing product order ${order._id}:`, error);
   }
-  if (product.stock < order.quantity) {
-    console.log(`Insufficient stock for product order ID: ${order._id}.`);
-    return;
-  }
-  product.stock -= order.quantity;
-  await product.save();
-  order.status = "shipped";
-  await order.save();
-  console.log(`Product order ${order._id} has been shipped.`);
 }
 
 async function handleOfferOrder(order) {
@@ -659,12 +714,19 @@ async function handleOfferOrder(order) {
       return;
     }
 
+    const totalCost = offer.products.reduce(
+      (acc, product) => acc + product.cost * order.quantity,
+      0
+    );
+
     const discountMultiplier = order.quantity >= 10 ? 0.9 : 1;
     const totalPrice = offer.price * order.quantity * discountMultiplier;
+    const profitBeforeTax = totalPrice - totalCost;
 
     for (const product of offer.products) {
       if (product.stock < order.quantity) {
         console.error(`Insufficient stock for product ${product.name}`);
+        return;
       }
       product.stock -= order.quantity;
       await product.save();
@@ -672,6 +734,8 @@ async function handleOfferOrder(order) {
 
     order.status = "shipped";
     order.totalPrice = totalPrice;
+    order.profitBeforeTax = profitBeforeTax;
+    order.profitAfterTax = Math.max(0, profitBeforeTax * 0.7);
     await order.save();
 
     console.log(
@@ -734,7 +798,14 @@ async function viewAllSales() {
   console.log("Viewing all sales orders...");
 
   const salesOrders = await SalesOrder.find({})
-    .populate("product offer")
+    .populate({
+      path: "offer",
+      populate: {
+        path: "products",
+        model: "Product",
+      },
+    })
+    .populate("product")
     .exec();
 
   if (salesOrders.length === 0) {
@@ -743,31 +814,167 @@ async function viewAllSales() {
     return;
   }
 
-  salesOrders.forEach((order, index) => {
+  for (const order of salesOrders) {
     let date = new Date(order.date).toLocaleDateString("en-US");
     let status = order.status;
-    let totalCost;
+    let totalCost = 0;
 
     if (order.product) {
-      totalCost = order.product.price * order.quantity;
-    } else if (order.offer) {
-      totalCost = order.offer.price * order.quantity;
-    } else {
-      totalCost = "N/A";
+      totalCost = order.product.cost * order.quantity;
+    } else if (order.offer && order.offer.products) {
+      totalCost = order.offer.products.reduce(
+        (acc, product) => acc + product.cost * order.quantity,
+        0
+      );
     }
 
     console.log(`Order Number: ${order._id}`);
     console.log(`Date: ${date}`);
     console.log(`Status: ${status}`);
-    console.log(`Total Cost: $${totalCost}`);
+    console.log(`Total Cost: $${totalCost.toFixed(2)}`);
     console.log("------");
-  });
+  }
 
   mainMenu();
 }
 
-function viewSumOfAllProfits() {
-  console.log("Viewing sum of all profits...");
+async function addNewOffer() {
+  console.log("Creating a new offer...");
+  const products = await Product.find({});
+
+  if (products.length === 0) {
+    console.log("No products available to create an offer.");
+    mainMenu();
+    return;
+  }
+
+  let selectedProductIds = [];
+  let inputVal = "";
+
+  while (inputVal.toLowerCase() !== "c") {
+    console.clear();
+    console.log("Available products (select by number, confirm with 'c'):");
+
+    products.forEach((product, index) => {
+      const selectedMark = selectedProductIds.includes(product._id.toString())
+        ? "(Selected)"
+        : "";
+      console.log(
+        `${index + 1}: ${product.name} - Cost: $${product.cost} ${selectedMark}`
+      );
+    });
+
+    inputVal = input("Toggle product selection (number) or confirm (c): ");
+    const productIndex = parseInt(inputVal) - 1;
+
+    if (
+      !isNaN(productIndex) &&
+      productIndex >= 0 &&
+      productIndex < products.length
+    ) {
+      const productId = products[productIndex]._id.toString();
+      const index = selectedProductIds.indexOf(productId);
+      if (index > -1) {
+        selectedProductIds.splice(index, 1);
+      } else {
+        selectedProductIds.push(productId);
+      }
+    }
+  }
+
+  console.clear();
+  console.log(`Selected products for the offer:`);
+  let totalCost = 0;
+  products
+    .filter((product) => selectedProductIds.includes(product._id.toString()))
+    .forEach((product) => {
+      totalCost += product.cost;
+      console.log(`${product.name} - Cost: $${product.cost}`);
+    });
+
+  console.log(`Total cost of selected products: $${totalCost}`);
+  let offerPrice = parseFloat(input("Enter offer price: $").trim());
+
+  const offer = new Offer({
+    products: selectedProductIds,
+    price: offerPrice,
+    cost: totalCost,
+    active: true,
+  });
+
+  try {
+    await offer.save();
+    console.log("Offer created successfully.");
+    mainMenu();
+  } catch (error) {
+    console.error("Failed to create offer:", error);
+    mainMenu();
+  }
+}
+
+async function viewSumOfAllProfits() {
+  console.log("\nSelect a product to view related offer profits:");
+  const products = await Product.find({}).exec();
+
+  products.forEach((product, index) => {
+    console.log(`${index + 1}: ${product.name}`);
+  });
+
+  let productChoice =
+    parseInt(input("Enter the number of the product: ").trim(), 10) - 1;
+  if (
+    isNaN(productChoice) ||
+    productChoice < 0 ||
+    productChoice >= products.length
+  ) {
+    console.log("Invalid selection.");
+    mainMenu();
+    return;
+  }
+
+  const selectedProduct = products[productChoice];
+  console.log(
+    `Selected product for profit calculation: "${selectedProduct.name}"`
+  );
+
+  const offersContainingProduct = await Offer.find({
+    products: selectedProduct._id,
+  }).exec();
+
+  if (offersContainingProduct.length === 0) {
+    console.log(`No offers found containing "${selectedProduct.name}".`);
+    mainMenu();
+    return;
+  }
+
+  const offerIds = offersContainingProduct.map((offer) => offer._id);
+
+  const result = await SalesOrder.aggregate([
+    {
+      $match: {
+        offer: { $in: offerIds },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalProfitBeforeTax: { $sum: "$profitBeforeTax" },
+      },
+    },
+  ]);
+
+  if (result.length > 0 && !isNaN(result[0].totalProfitBeforeTax)) {
+    console.log(
+      `Total Profit Before Tax from offers containing "${
+        selectedProduct.name
+      }": $${result[0].totalProfitBeforeTax.toFixed(2)}`
+    );
+  } else {
+    console.log(
+      `No profits recorded for offers containing "${selectedProduct.name}".`
+    );
+  }
+
   mainMenu();
 }
 

@@ -86,6 +86,7 @@ const insertData = async () => {
         findProductIdByName("Smartphone"),
       ],
       price: 1800,
+      cost: 2400,
       active: true,
     },
     {
@@ -94,6 +95,7 @@ const insertData = async () => {
         findProductIdByName("Shampoo"),
       ],
       price: 30,
+      cost: 100,
       active: true,
     },
     {
@@ -103,13 +105,24 @@ const insertData = async () => {
         findProductIdByName("Soccer Ball"),
       ],
       price: 1830,
+      cost: 2460,
       active: false,
     },
   ]);
 
   await SalesOrder.insertMany([
-    { offer: offers[0]._id, quantity: 2, status: "pending" },
-    { offer: offers[2]._id, quantity: 1, status: "pending" },
+    {
+      offer: offers[0]._id,
+      quantity: 2,
+      status: "pending",
+      totalPrice: 4800,
+    },
+    {
+      offer: offers[2]._id,
+      quantity: 1,
+      status: "pending",
+      totalPrice: 2460,
+    },
   ]);
 
   await Category.insertMany([
@@ -121,6 +134,9 @@ const insertData = async () => {
   ]);
 
   console.log("Data inserted successfully!");
+  console.log("Exiting...");
+  mongoose.disconnect();
+  process.exit(0);
 };
 
 insertData().catch(console.error);
