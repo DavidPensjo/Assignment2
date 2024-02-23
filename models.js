@@ -23,6 +23,7 @@ const offerSchema = new mongoose.Schema({
     },
   ],
   price: Number,
+  cost: Number,
   active: Boolean,
 });
 
@@ -36,16 +37,20 @@ const salesOrderSchema = new mongoose.Schema({
     ref: "Product",
   },
   quantity: Number,
-  totalPrice: Number,
   status: String,
   date: {
     type: Date,
     default: Date.now,
   },
+  totalPrice: Number,
+  totalRevenue: Number,
+  revenuePerOffer: Number,
+  totalProfit: Number,
+  profitPerOffer: Number,
 });
 
 const categorySchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, required: true, unique: true },
 });
 
 export const Supplier = mongoose.model("Supplier", supplierSchema);

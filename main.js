@@ -213,46 +213,54 @@ async function addNewProduct() {
 async function viewProductsByCategory() {
   console.log("Viewing products by category...");
 
-  const categories = await Category.find();
-  if (categories.length === 0) {
-    console.log("No categories found.");
-    mainMenu();
-    return;
-  }
+  try {
+    const categories = await Category.find();
+    if (categories.length === 0) {
+      console.log("No categories found.");
+      mainMenu();
+      return;
+    }
 
-  categories.forEach((category, index) => {
-    console.log(`${index + 1}. ${category.name}`);
-  });
+    categories.forEach((category, index) => {
+      console.log(`${index + 1}. ${category.name}`);
+    });
 
-  let choice = parseInt(
-    input("Select a category to view products: ").trim(),
-    10
-  );
-  if (isNaN(choice) || choice < 1 || choice > categories.length) {
-    console.log("Invalid choice.");
-    mainMenu();
-    return;
-  }
-
-  const selectedCategory = categories[choice - 1];
-  const products = await Product.find({ category: selectedCategory.name });
-
-  if (products.length === 0) {
-    console.log(`No products found in category "${selectedCategory.name}".`);
-    mainMenu();
-    return;
-  }
-
-  console.log(`Products in category "${selectedCategory.name}":`);
-  products.forEach((product, index) => {
-    console.log(
-      `${index + 1}. Name: ${product.name}, Price: $${product.price}, Cost: $${
-        product.cost
-      }, Supplier: ${product.supplier}, Stock: ${product.stock}pcs`
+    let choice = parseInt(
+      input("Select a category to view products: ").trim(),
+      10
     );
-  });
+    if (isNaN(choice) || choice < 1 || choice > categories.length) {
+      console.log("Invalid choice.");
+      mainMenu();
+      return;
+    }
 
-  mainMenu();
+    const selectedCategory = categories[choice - 1];
+    const products = await Product.find({ category: selectedCategory.name });
+
+    if (products.length === 0) {
+      console.log(`No products found in category "${selectedCategory.name}".`);
+      mainMenu();
+      return;
+    }
+
+    console.log(`Products in category "${selectedCategory.name}":`);
+    products.forEach((product, index) => {
+      console.log(
+        `${index + 1}. Name: ${product.name}, Price: $${
+          product.price
+        }, Cost: $${product.cost}, Supplier: ${product.supplier}, Stock: ${
+          product.stock
+        }pcs`
+      );
+    });
+  } catch (error) {
+    console.error(
+      "An error occurred while fetching products by category:",
+      error
+    );
+    mainMenu();
+  }
 }
 
 async function viewProductsBySupplier() {
