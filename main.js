@@ -1,38 +1,40 @@
 import prompt from "prompt-sync";
 import mongoose from "mongoose";
+import colors from "colors";
 import { Product, Supplier, Offer, SalesOrder, Category } from "./models.js";
 
 const input = prompt({ sigint: true });
 
 mongoose
   .connect("mongodb://localhost:27017/ProductManagementSystem")
-  .then(() => console.log("Connected to MongoDB..."))
+  .then(() => console.log("Connected to MongoDB...".gray))
   .catch((err) => console.error("Could not connect to MongoDB...", err));
 
 async function mainMenu() {
   await updateOffersActiveStatus();
 
-  console.log("\nMain Menu:");
-  console.log("1. Add new category");
-  console.log("2. Add new product");
-  console.log("3. Create an offer");
-  console.log("4. View products by category");
-  console.log("5. View products by supplier");
-  console.log("6. View all offers within a price range");
+  console.log("\nMain Menu:".white);
+  console.log("1. Add new category".green);
+  console.log("2. Add new product".green);
+  console.log("3. Create an offer".green);
+  console.log("4. View products by category".cyan);
+  console.log("5. View products by supplier".cyan);
+  console.log("6. View all offers within a price range".cyan);
   console.log(
-    "7. View all offers that contain a product from a specific category"
+    "7. View all offers that contain a product from a specific category".cyan
   );
   console.log(
     "8. View the number of offers based on the number of its products in stock"
+      .cyan
   );
-  console.log("9. Create order for products");
-  console.log("10. Create order for offers");
-  console.log("11. Ship orders");
-  console.log("12. Add a new supplier");
-  console.log("13. View suppliers");
-  console.log("14. View all sales");
-  console.log("15. View sum of all profits");
-  console.log("16. Exit");
+  console.log("9. Create order for products".green);
+  console.log("10. Create order for offers".green);
+  console.log("11. Ship orders".green);
+  console.log("12. Add a new supplier".green);
+  console.log("13. View suppliers".cyan);
+  console.log("14. View all sales".cyan);
+  console.log("15. View sum of all profits".cyan);
+  console.log("16. Exit".red);
 
   let option = input("Select an option: ");
 
@@ -125,10 +127,17 @@ async function updateOffersActiveStatus() {
 async function addNewCategory() {
   console.log("Adding a new category...");
 
-  let name = input("Enter category name: ").trim();
+  const name = input("Enter category name: ").trim();
 
   if (!name) {
     console.log("Category name cannot be empty.");
+    mainMenu();
+    return;
+  }
+
+  const existingCategory = await Category.findOne({ name });
+  if (existingCategory) {
+    console.log(`Category "${name}" already exists.`);
     mainMenu();
     return;
   }
@@ -137,7 +146,6 @@ async function addNewCategory() {
 
   try {
     await category.save();
-    console.clear();
     console.log(`Category "${name}" was added successfully.`);
   } catch (error) {
     console.error("Failed to add category:", error);
@@ -235,7 +243,7 @@ async function viewProductsByCategory() {
   console.log("Viewing products by category...");
 
   try {
-    const categories = await Category.find();
+    const categories = await Category.find().lean();
     if (categories.length === 0) {
       console.log("No categories found.");
       mainMenu();
@@ -258,7 +266,9 @@ async function viewProductsByCategory() {
 
     const selectedCategory = categories[choice - 1];
     console.log(`Fetching products for category: ${selectedCategory.name}`);
-    const products = await Product.find({ category: selectedCategory.name });
+    const products = await Product.find({
+      category: selectedCategory.name,
+    }).lean();
 
     if (products.length === 0) {
       console.log(`No products found in category "${selectedCategory.name}".`);
@@ -358,7 +368,7 @@ async function viewAllOffersWithinPriceRange() {
     }
   }
 
-  const offers = await Offer.find(queryConditions);
+  const offers = await Offer.find(queryConditions).populate("products");
 
   if (offers.length === 0) {
     console.log("No offers found within the specified price range.");
@@ -368,10 +378,13 @@ async function viewAllOffersWithinPriceRange() {
 
   console.log("Offers within the specified price range:");
   offers.forEach((offer, index) => {
+    const productNames = offer.products
+      .map((product) => product.name)
+      .join(", ");
     console.log(
       `${index + 1}. Price: $${offer.price}, Stock: ${
         offer.active ? "In stock" : "Out of stock"
-      }, Products: ${offer.products.join(", ")}`
+      }, Products: ${productNames}`
     );
   });
 
