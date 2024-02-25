@@ -926,6 +926,29 @@ async function addNewOffer() {
 }
 
 async function viewSumOfAllProfits() {
+  console.log("\nCalculating total profit from all offers...");
+
+  const totalProfitResult = await SalesOrder.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalProfitBeforeTax: { $sum: "$profitBeforeTax" },
+      },
+    },
+  ]);
+
+  if (totalProfitResult.length > 0) {
+    console.log(
+      `Total Profit Before Tax from all offers: $${totalProfitResult[0].totalProfitBeforeTax.toFixed(
+        2
+      )}`
+    );
+  } else {
+    console.log("No profits recorded for any offers.");
+    mainMenu();
+    return;
+  }
+
   console.log("\nSelect a product to view related offer profits:");
   const products = await Product.find({}).exec();
 
