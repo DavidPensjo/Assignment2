@@ -241,7 +241,7 @@ async function viewProductsByCategory() {
   console.log("Viewing products by category...");
 
   try {
-    const categories = await Category.find();
+    const categories = await Category.find().lean();
     if (categories.length === 0) {
       console.log("No categories found.");
       mainMenu();
@@ -264,7 +264,9 @@ async function viewProductsByCategory() {
 
     const selectedCategory = categories[choice - 1];
     console.log(`Fetching products for category: ${selectedCategory.name}`);
-    const products = await Product.find({ category: selectedCategory.name });
+    const products = await Product.find({
+      category: selectedCategory.name,
+    }).lean();
 
     if (products.length === 0) {
       console.log(`No products found in category "${selectedCategory.name}".`);
@@ -289,7 +291,7 @@ async function viewProductsByCategory() {
     );
     mainMenu();
   }
-  mainMenu();
+  mainMenu(); // Consider whether this call to mainMenu should be within the catch block as well
 }
 
 async function viewProductsBySupplier() {
