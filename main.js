@@ -1,38 +1,40 @@
 import prompt from "prompt-sync";
 import mongoose from "mongoose";
+import colors from "colors";
 import { Product, Supplier, Offer, SalesOrder, Category } from "./models.js";
 
 const input = prompt({ sigint: true });
 
 mongoose
   .connect("mongodb://localhost:27017/ProductManagementSystem")
-  .then(() => console.log("Connected to MongoDB..."))
+  .then(() => console.log("Connected to MongoDB...".gray))
   .catch((err) => console.error("Could not connect to MongoDB...", err));
 
 async function mainMenu() {
   await updateOffersActiveStatus();
 
-  console.log("\nMain Menu:");
-  console.log("1. Add new category");
-  console.log("2. Add new product");
-  console.log("3. Create an offer");
-  console.log("4. View products by category");
-  console.log("5. View products by supplier");
-  console.log("6. View all offers within a price range");
+  console.log("\nMain Menu:".white);
+  console.log("1. Add new category".green);
+  console.log("2. Add new product".green);
+  console.log("3. Create an offer".green);
+  console.log("4. View products by category".cyan);
+  console.log("5. View products by supplier".cyan);
+  console.log("6. View all offers within a price range".cyan);
   console.log(
-    "7. View all offers that contain a product from a specific category"
+    "7. View all offers that contain a product from a specific category".cyan
   );
   console.log(
     "8. View the number of offers based on the number of its products in stock"
+      .cyan
   );
-  console.log("9. Create order for products");
-  console.log("10. Create order for offers");
-  console.log("11. Ship orders");
-  console.log("12. Add a new supplier");
-  console.log("13. View suppliers");
-  console.log("14. View all sales");
-  console.log("15. View sum of all profits");
-  console.log("16. Exit");
+  console.log("9. Create order for products".green);
+  console.log("10. Create order for offers".green);
+  console.log("11. Ship orders".green);
+  console.log("12. Add a new supplier".green);
+  console.log("13. View suppliers".cyan);
+  console.log("14. View all sales".cyan);
+  console.log("15. View sum of all profits".cyan);
+  console.log("16. Exit".red);
 
   let option = input("Select an option: ");
 
@@ -291,7 +293,7 @@ async function viewProductsByCategory() {
     );
     mainMenu();
   }
-  mainMenu(); // Consider whether this call to mainMenu should be within the catch block as well
+  mainMenu();
 }
 
 async function viewProductsBySupplier() {
