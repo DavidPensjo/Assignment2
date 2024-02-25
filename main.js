@@ -125,10 +125,17 @@ async function updateOffersActiveStatus() {
 async function addNewCategory() {
   console.log("Adding a new category...");
 
-  let name = input("Enter category name: ").trim();
+  const name = input("Enter category name: ").trim();
 
   if (!name) {
     console.log("Category name cannot be empty.");
+    mainMenu();
+    return;
+  }
+
+  const existingCategory = await Category.findOne({ name });
+  if (existingCategory) {
+    console.log(`Category "${name}" already exists.`);
     mainMenu();
     return;
   }
@@ -137,7 +144,6 @@ async function addNewCategory() {
 
   try {
     await category.save();
-    console.clear();
     console.log(`Category "${name}" was added successfully.`);
   } catch (error) {
     console.error("Failed to add category:", error);
