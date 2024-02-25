@@ -358,7 +358,7 @@ async function viewAllOffersWithinPriceRange() {
     }
   }
 
-  const offers = await Offer.find(queryConditions);
+  const offers = await Offer.find(queryConditions).populate("products");
 
   if (offers.length === 0) {
     console.log("No offers found within the specified price range.");
@@ -368,10 +368,13 @@ async function viewAllOffersWithinPriceRange() {
 
   console.log("Offers within the specified price range:");
   offers.forEach((offer, index) => {
+    const productNames = offer.products
+      .map((product) => product.name)
+      .join(", ");
     console.log(
       `${index + 1}. Price: $${offer.price}, Stock: ${
         offer.active ? "In stock" : "Out of stock"
-      }, Products: ${offer.products.join(", ")}`
+      }, Products: ${productNames}`
     );
   });
 
